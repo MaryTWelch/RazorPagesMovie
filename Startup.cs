@@ -14,33 +14,52 @@ namespace RazorPagesMovie
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        // Adding IWebHostEnvironment allows the qpp to use SQLite in 
+        // dev and SQL Server in production
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
+            Environment = env;
             Configuration = configuration;
         }
 
         public IConfiguration Configuration { get; }
-
+        public IWebHostEnvironment Environment { get; }
+        
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            if (Environment.IsDevelopment())
+            {
+                // Use SQL Lite
+                services.AddDbContext<RazorPagesMovieContext>(options =>
+                    options.UseSqlite(Configuration.GetConnectionString("RazorPagesMovieContext")));                
+            }
+            else
+            {
+                // Use SQL Server
+                services.AddDbContext<RazorPagesMovieContext>(options =>
+                    options.UseSqlServer(Configuration.GetConnectionString("MovieContext")));
+            }
             services.AddRazorPages().AddRazorRuntimeCompilation();
-            services.AddDbContext<RazorPagesMovieContext>(options =>
-                options.UseSqlite(Configuration.GetConnectionString("RazorPagesMovieContext")));
+            services.AddDatabaseDeveloperPageExceptionFilter();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app)
         {
-            if (env.IsDevelopment())
+            if (Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                // app.UseDatabaseErrorPage();
+                app.UseMigrationsEndPoint();
             }
             else
             {
                 app.UseExceptionHandler("/Error");
+                app.UseHsts();
             }
 
+            app.UseHttpsRedirection();
             app.UseStaticFiles();
 
             app.UseRouting();
